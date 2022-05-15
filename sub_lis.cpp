@@ -22,10 +22,15 @@ long lisx = 0, lisy = 0, lisz = 0, lisxp = 0;
 void lis_init()
 {
 	if (conf.lis_oldpcb)
+	{
 		lis = Adafruit_LIS3DH(OLIS3DH_CS, OLIS3DH_MOSI, OLIS3DH_MISO, OLIS3DH_CLK);
+		Wire.begin(OLIS3DH_MOSI, OLIS3DH_MISO);
+	}
 	else
+	{
 		lis = Adafruit_LIS3DH(LIS3DH_CS, LIS3DH_MOSI, LIS3DH_MISO, LIS3DH_CLK);
-	Wire.begin(LIS3DH_MOSI, LIS3DH_MISO);
+		Wire.begin(LIS3DH_MOSI, LIS3DH_MISO);
+	}
 	if (lis.begin(0x18))
 	{
 		lisd = (long*)realloc(lisd, LIS_SIZE * sizeof(long));

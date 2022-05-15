@@ -159,11 +159,9 @@ td {padding: 0 10px}
 		<td><button onclick="r('stp')">stop</button></td>
 		<td id=go></td></tr>
 	<tr><td>настройки</td>
-		<td colspan=3><button onclick="r('rst')">сбросить</button>  
-		<button onclick="r('cmt')">сохранить</button></td></tr>
-	<tr><td></td>
-		<td id=rst colspan=2></td>
-		<td id=cmt></td></tr>
+		<td><button onclick="r('cmt')">сохранить</button></td>
+		<td><button onclick="r('rst')">сбросить</button></td>
+		<td><span id=rst></span> <span id=cmt></span></td></tr>
 	<tr><td>перезагрузка</td>
 		<td colspan=2><button onclick="r('restart')">сбросить</button></td>
 		<td></td></tr>
@@ -692,19 +690,7 @@ void handleFsRead()
 void handleNotFound() {
 	if (!handleFileRead(server.uri()))
 	{
-		String message = F("File Not Found\n\n");
-		message += F("URI: ");
-		message += server.uri();
-		message += F("\nMethod: ");
-		message += (server.method() == HTTP_GET) ? F("GET") : F("POST");
-		message += F("\nArguments: ");
-		message += server.args();
-		message += "\n";
-		for (uint8_t i = 0; i < server.args(); i++)
-		{
-			message += " " + server.argName(i) + F(": ") + server.arg(i) + F("\n");
-		}
-		server.send(404, textplain, message);
+		server.send(404, texthtml, "<a href='/'>Not found</a>");
 	}
 }
 
@@ -759,20 +745,6 @@ void handleReq()
 		}
 		ans += "}";
 		server.send(200, textplain, ans);
-	}
-}
-
-void handleReqf()
-{
-	if (server.args() > 0)
-	{
-		String san = server.argName(0);
-		String sav = server.arg(0);
-		server.send(200, textplain, get_answf(san, sav));
-	}
-	else
-	{
-		server.send(200, textplain, F("wrong args"));
 	}
 }
 
@@ -1168,16 +1140,16 @@ table, td {min-width:30px}
 <table><caption>-Calibration-</caption>
 
 <tr><td align=right>Vcc mv: </td>
-<td><input type=number id=vcc min=0 max=5000></td>
+<td><input type=number id=vcc min=100 max=5000></td>
 <td><input type=button value=set onclick="r('vcc')"></td></tr>
 
 <tr><td align=right>LedsCount: </td>
-<td><input type=number id=leds min=1 max=256></td>
+<td><input type=number id=leds min=1 max=255></td>
 <td><input type=button value=set onclick="r('leds')"></td></tr>
 
-<tr><td align=right>LedStrip Mode: </td>
-<td><label><input type=checkbox id=mode> invert</label></td>
-<td><input type=button value=set onclick="r('mode')"></td></tr>
+<tr><td align=right>LedStrip Dir: </td>
+<td><label><input type=checkbox id=dir> invert</label></td>
+<td><input type=button value=set onclick="r('dir')"></td></tr>
 
 <tr><td align=right>File delay micros <br>[0-255] x10: </td>
 <td><input type=number id=fwait min=0 max=255></td>
@@ -1201,8 +1173,9 @@ table, td {min-width:30px}
 <script>
 function r(p){
 	var el=document.getElementById(p), v;
-	if (el.type.toLowerCase()=='checkbox') v=el.checked?1:0; else v=el.value;
-	fetch('/reqf?'+p+'='+(v))
+	if (el.type.toLowerCase()=='checkbox') v=el.checked?1:0;
+	else {v=el.value; if(parseInt(v)<parseInt(el.min) || parseInt(v)>parseInt(el.max)) {alert('wrong value, use '+el.min+'-'+el.max);return;}}
+	fetch('/req?'+p+'='+(v))
 	.then((response) => {return response.text();})
 	.then((data) => {document.getElementById('ans').innerHTML=data;});
 }
@@ -1245,7 +1218,7 @@ void handleConfig()
 	ans += F(", spdlis:"); ans += String(conf.lis_spd);
 	ans += F(", vcc:"); ans += String(getvcc(), DEC);
 	ans += F(", leds:"); ans += String(conf.leds, DEC);
-	ans += F(", mode:"); ans += String(conf.mode);
+	ans += F(", dir:"); ans += String(conf.dir);
 	ans += F(", fwait:"); ans += String(conf.fwait, DEC);
 	ans += F(", cont:"); ans += String(conf.cont, DEC);
 	ans += F(", oldlis:"); ans += String(conf.lis_oldpcb);
@@ -1405,7 +1378,6 @@ void http_begin()
 	server.on(F("/pics"), handlePics);
 	server.on(F("/dec"), handleDec);
 	server.on(F("/req"), handleReq);
-	server.on(F("/reqf"), handleReqf);
 	server.on(F("/lis"), handleLis);
 	server.on(F("/prog"), handleProg);
 	server.on(F("/progs"), handleProgs);

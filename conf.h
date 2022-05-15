@@ -12,7 +12,7 @@ struct config
 	uint8_t macslen;
 	uint8_t wait;
 	uint8_t brgn;
-	bool mode;
+	bool dir;
 	uint8_t leds;
 	float vcc;
 	uint8_t fwait;

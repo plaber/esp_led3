@@ -216,7 +216,7 @@ void bmp_net()
 	udp_poll();
 	check_off();
 	//if (conf.enow) enow_poll();
-	if (conf.lis_on) 
+	if (conf.lis_on && stat.lis_found)
 	{
 		lis_fill();
 		if (conf.lis_brgn || conf.lis_hit || conf.lis_spd) lis_poll();

@@ -65,7 +65,7 @@ void led_clear(RgbColor & color)
 void led_setpx(int i, int r, int g, int b)
 {
 	RgbColor color(cont[r], cont[g], cont[b]);
-	if (conf.mode == true)
+	if (conf.dir == true)
 	{
 		if (strip) strip->SetPixelColor(conf.leds - i - 1, color);
 	}
@@ -77,7 +77,7 @@ void led_setpx(int i, int r, int g, int b)
 
 void led_setpx(int i, struct RgbColor & color)
 {
-	if (conf.mode == true)
+	if (conf.dir == true)
 	{
 		if (strip) strip->SetPixelColor(conf.leds - i - 1, color);
 	}

@@ -32,7 +32,7 @@ struct config conf = {
 	0, //macslen
 	1, //wait
 	8, //brgn
-	false, //mode f-normal t-invert
+	false, //direction f-normal t-invert
 	32, //pixels count
 	5, //vcc
 	190, //fwait
@@ -150,6 +150,8 @@ void setup()
 	
 	rootFold = fileSystem->openDir("/");
 	bmp_next();
+
+	if (conf.lis_on) lis_init();
 	
 	http_begin();
 	wifi_init();
@@ -157,8 +159,6 @@ void setup()
 	led_clear();
 
 	led_drawvcc();
-
-	if (conf.lis_on) lis_init();
 	
 	if (conf.enow)
 	{

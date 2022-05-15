@@ -9,7 +9,7 @@
 #define EEP_SIZE 320
 #define EEP_WAIT 0
 #define EEP_BRGN 1
-#define EEP_MODE 2
+#define EEP_DIR 2
 #define EEP_WHDR 3
 #define EEP_VCC  4 //4 bytes
 #define EEP_BTN1 8 //NOT USING
@@ -42,6 +42,5 @@ void eep_load();
 int getvcc();
 int vcc2p(int gvcc);
 String get_answ(String san, String sav);
-String get_answf(String san, String sav);
 
 #endif

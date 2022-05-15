@@ -39,8 +39,8 @@ void reset_conf()
 
 void reset_factory()
 {
-	conf.mode = false;
-	EEPROM.write(EEP_MODE, 0);
+	conf.dir = false;
+	EEPROM.write(EEP_DIR, 0);
 	conf.leds = 32;
 	EEPROM.write(EEP_LEDS, 32);
 	conf.vcc = 5.8;
@@ -56,10 +56,9 @@ void print_conf()
 {
 	Serial.print(F("ver ")); Serial.println(conf.ver);
 	Serial.print(F("wpref ")); Serial.println(conf.wpref);
-	
 	Serial.print(F("wait ")); Serial.println(conf.wait);
 	Serial.print(F("brgn ")); Serial.println(conf.brgn);
-	Serial.print(F("mode ")); Serial.println(conf.mode);
+	Serial.print(F("dir ")); Serial.println(conf.dir);
 	Serial.print(F("whdr ")); Serial.println(stat.whdr);
 	Serial.print(F("vcc  ")); Serial.println(conf.vcc);
 	Serial.print(F("leds ")); Serial.println(conf.leds);
@@ -86,9 +85,9 @@ void eep_load()
 		reset_factory();
 		reset_conf();
 	}
-	if (EEPROM.read(EEP_MODE) == 0) conf.mode = false; else conf.mode = true;
+	if (EEPROM.read(EEP_DIR) == 0) conf.dir = false; else conf.dir = true;
 	if (EEPROM.read(EEP_WHDR) == 4) stat.whdr = 4; else stat.whdr = 3;
-	conf.leds = EEPROM.read(EEP_LEDS);
+	conf.leds = EEPROM.read(EEP_LEDS); if(!conf.leds) conf.leds = 32;
 	EEPROM.get(EEP_VCC, conf.vcc);
 	conf.fwait = EEPROM.read(EEP_FWAIT);
 	if (conf.fwait == 0) conf.fwait = 10;
@@ -144,23 +143,330 @@ void lis_save()
 
 String get_answ(String san, String sav)
 {
-	if (san == F("ver")) return (conf.ver + " " + conf.wpref + "_" + String(ESP.getChipId(), HEX));
-	if (san == F("vcc"))
+	if (san == F("blink"))
 	{
-		int gvcc = getvcc();
-		int pr = vcc2p(gvcc);
-		return (String(pr, DEC) + F("% (") + String(getvcc(), DEC) + F("mV) ") + WiFi.RSSI());
+		led_blinkall();
+		return F("blink white");
 	}
-	if (san == F("ip"))
+	if (san == F("bpm"))
 	{
-		IPAddress broadCast = WiFi.localIP();
-		return (String(broadCast[0], DEC) + "." + String(broadCast[1], DEC) + "." + String(broadCast[2], DEC) + "." + String(broadCast[3], DEC));
+		uint16_t savi = sav.toInt();
+		if (savi > 100 && savi < 65535)
+		{
+			stat.bpm = savi;
+			EEPROM.write(EEP_BPM   , highByte(stat.bpm));
+			EEPROM.write(EEP_BPM + 1, lowByte(stat.bpm));
+			return (F("bpm ") + String(stat.bpm, DEC));
+		}
+		else if (savi == 0)
+		{
+			return F("bpm ") + String(stat.bpm, DEC);
+		}
+		else
+		{
+			return F("bpm wrong value");
+		}
+	}
+	if (san == F("brgn") || san == F("brg"))
+	{
+		String brgnwarn = "";
+		if (sav == "m")
+		{
+			conf.brgn -= conf.brgn > 8 ? 4 : 0;
+		}
+		if (sav == "p")
+		{
+			conf.brgn += conf.brgn < 128 ? 4 : 0;
+			if (conf.brgn == 128) brgnwarn = F(" max 128");
+		}
+		int savi = sav.toInt();
+		if (savi >= 4 && savi <= 128)
+		{
+			conf.brgn = savi;
+		}
+		if (savi > 128) 
+		{
+			brgnwarn = F(" max 128 < ");
+			brgnwarn += String(savi);
+		}
+		led_brgn();
+		if (stat.go == false) led_show();
+		EEPROM.write(EEP_BRGN, conf.brgn);
+		return String(conf.brgn) + brgnwarn;
+	}
+	if (san == F("btmode"))
+	{
+		if (sav == F("one"))
+		{
+			stat.loop = false;
+			return F("mode one");
+		}
+		if (sav == F("loop"))
+		{
+			stat.loop = true;
+			return F("mode loop");
+		}
+	}
+	if (san == F("cmt"))
+	{
+		json_save();
+		return F("save ok");
+	}
+	if (san == F("conf"))
+	{
+		if (fileSystem->exists("/config.txt"))
+		{
+			File cnffile = fileSystem->open("/config.txt", "r");
+			return cnffile.readStringUntil('\n');
+		}
+		else
+		{
+			String ans;
+			ans += F("prog:") + String(stat.progname);
+			ans += F(" macslen:") + String(conf.macslen) + " ";
+			char bufm[14];
+			for (int i = 0; i < conf.macslen; i++)
+			{
+				sprintf(bufm, "%02X%02X%02X%02X%02X%02X,", conf.macs[i][0],conf.macs[i][1],conf.macs[i][2],conf.macs[i][3],conf.macs[i][4],conf.macs[i][5]);
+				ans += String(bufm);
+			}
+			return ans;
+		}
+	}
+	if (san == F("cont"))
+	{
+		int savi = sav.toInt();
+		if (savi >= 0 && savi <=128)
+		{
+			savi = savi > 128 ? 128 : savi;
+			conf.cont = savi;
+			led_calccont();
+			EEPROM.write(EEP_CONT, conf.cont);
+			EEPROM.commit();
+			return F("cont set ok ") + sav;
+		}
+		else
+		{
+			return F("cont set fail, use 0-128 not ") + sav;
+		}
+	}
+	if (san == F("delbma"))
+	{
+		Dir rt = fileSystem->openDir("/");
+		while (rt.next())
+		{
+			String f = rt.fileName();
+			if (f.endsWith(exbma)) fileSystem->remove(f);
+		}
+		return F("done");
+	}
+	if (san == F("delconf"))
+	{
+		json_del();
+		conf.macslen = 0;
+		return F("conf deleted");
+	}
+	if (san == F("dir"))
+	{
+		int savi = sav.toInt();
+		if (savi == 0 || savi == 1)
+		{
+			conf.dir = savi ? true : false;
+			EEPROM.write(EEP_DIR, savi);
+			EEPROM.commit();
+			return F("dir set ok ") + sav;
+		}
+		else
+		{
+			return F("dir set fail ") + sav;
+		}
 	}
 	if (san == F("drip"))
 	{
 		IPAddress broadCast = WiFi.localIP();
 		led_drawip(broadCast[3]);
 		return F("draw ip");
+	}
+	if (san == F("enow"))
+	{
+		if (sav == "2")
+		{
+			EEPROM.write(EEP_ENOW, 2);
+			EEPROM.commit();
+			return F("next boot in enow");
+		}
+	}
+	if (san == F("facres"))
+	{
+		reset_factory();
+		return F("factory reset ok (refresh page)");
+	}
+	if (san == F("format"))
+	{
+		if (stat.fcom == false)
+		{
+			fileSystem->format();
+			json_save();
+			stat.fcom = true;
+			return F("format complete");
+		}
+		else
+		{
+			return F("format already complete");
+		}
+	}
+	if (san == F("free"))
+	{
+		FSInfo fs_info;
+		fileSystem->info(fs_info);
+		return String(fs_info.totalBytes - fs_info.usedBytes, DEC);
+	}
+	if (san == F("fwait"))
+	{
+		int savi = sav.toInt();
+		if (savi >= 0 && savi <= 255)
+		{
+			conf.fwait = savi;
+			EEPROM.write(EEP_FWAIT, savi);
+			EEPROM.commit();
+			return F("fwait set ok ") + sav;
+		}
+		else
+		{
+			return F("delay set fail, use 0-255 not ") + sav;
+		}
+	}
+	if (san == F("go"))
+	{
+		if (stat.go == false)
+		{
+			stat.go = true;
+			if (stat.calcmax)
+			{
+				bmp_max();
+				stat.calcmax = false;
+				rootFold = fileSystem->openDir("/");
+				bmp_next();
+			}
+			if (conf.wpref == F("fan"))
+			{
+				pinMode(2, OUTPUT);
+				digitalWrite(2, HIGH);
+			}
+		}//			1					2								3								4								5									6								7									8				9
+		return (F("runned ") + String(conf.wait, DEC) + " " + String(conf.brgn, DEC) + " " + String(stat.whdr, DEC) + 					" 0 "				 +String(stat.maxprog, DEC) + 					" 0 " + 				String(stat.maxbmp, DEC) + " 0");
+	}
+	if (san == F("heap"))
+	{
+		long fh = ESP.getFreeHeap();
+		char fhc[20];
+		ltoa(fh, fhc, 10);
+		return String(fhc);
+	}
+	if (san == F("info"))
+	{
+		return (		"w " + String(conf.wait, DEC) +" b "+ String(conf.brgn, DEC) +" m "+ String(stat.whdr, DEC) +" p "+ String(stat.currprog + 1, DEC) + "/" + String(stat.maxprog, DEC) + " b " + String(stat.currbmp, DEC) + "/" + String(stat.maxbmp, DEC));
+	}
+	if (san == F("ip"))
+	{
+		IPAddress broadCast = WiFi.localIP();
+		return (String(broadCast[0], DEC) + "." + String(broadCast[1], DEC) + "." + String(broadCast[2], DEC) + "." + String(broadCast[3], DEC));
+	}
+	if (san == F("leds"))
+	{
+		int savi = sav.toInt();
+		if (savi >= 1 && savi <= 255)
+		{
+			conf.leds = savi;
+			EEPROM.write(EEP_LEDS, conf.leds);
+			EEPROM.commit();
+			led_reinit(conf.leds);
+			return F("leds set ok ") + sav;
+		}
+		else
+		{
+			return F("leds set fail, use 1-255 not ") + sav;
+		}
+	}
+	if (san.endsWith(F("lis")))
+	{
+		if (san == F("brglis"))
+		{
+			if (sav == "1")
+			{
+				conf.lis_brgn = true;
+				lis_save();
+				return F("brgLis On");
+			}
+			if (sav == "0")
+			{
+				conf.lis_brgn = false;
+				lis_save();
+				return F("brgLis Off");
+			}
+		}
+		if (san == F("hitlis"))
+		{
+			if (sav == "1")
+			{
+				conf.lis_hit = true;
+				lis_save();
+				return F("hitLis On");
+			}
+			if (sav == "0")
+			{
+				conf.lis_hit = false;
+				lis_save();
+				return F("hitLis Off");
+			}
+		}
+		if (san == F("oldlis"))
+		{
+			if (sav == "1")
+			{
+				conf.lis_oldpcb = true;
+				lis_save();
+				return F("oldpcb Lis yes");
+			}
+			if (sav == "0")
+			{
+				conf.lis_oldpcb = false;
+				lis_save();
+				return F("oldpcb Lis no");
+			}
+		}
+		if (san == F("spdlis"))
+		{
+			if (sav == "1")
+			{
+				conf.lis_spd = true;
+				lis_save();
+				return F("spdLis On");
+			}
+			if (sav == "0")
+			{
+				conf.lis_spd = false;
+				lis_save();
+				return F("spdLis Off");
+			}
+		}
+		if (san == F("uselis"))
+		{
+			if (sav == "1")
+			{
+				conf.lis_on = true;
+				EEPROM.write(EEP_LIS, 0);
+				EEPROM.commit();
+				return F("lis On");
+			}
+			if (sav == "0")
+			{
+				conf.lis_on = false;
+				EEPROM.write(EEP_LIS, 1);
+				EEPROM.commit();
+				return F("lis Off");
+			}
+		}
 	}
 	if (san == F("mac"))
 	{
@@ -173,6 +479,14 @@ String get_answ(String san, String sav)
 		WiFi.softAPmacAddress(mc);
 		sprintf(mcb, "%02X%02X%02X%02X%02X%02X", mc[0], mc[1], mc[2], mc[3], mc[4], mc[5]);
 		return String(mcb);
+	}
+	if (san == F("macor"))
+	{
+		int px = enow_getorder();
+		led_clear();
+		for (int i = 0; i < px; i++) led_setpx(i, 0, 255, 0);
+		led_show();
+		return F("mac order");
 	}
 	if (san == F("macs"))
 	{
@@ -238,145 +552,6 @@ String get_answ(String san, String sav)
 			return F("mac sended");
 		}
 	}
-	if (san == F("macor"))
-	{
-		int px = enow_getorder();
-		led_clear();
-		for (int i = 0; i < px; i++) led_setpx(i, 0, 255, 0);
-		led_show();
-		return F("mac order");
-	}
-	if (san == F("wfaps"))
-	{
-		int scn = WiFi.scanNetworks();
-		String ans = "";
-		if (scn > 0)
-			for (int scni = 0; scni < scn; ++scni)
-			{
-				ans += F("<label><input type='radio' name='ssid' value='");
-				ans += WiFi.SSID(scni) + "'>" + WiFi.SSID(scni);
-				ans += F("</label> [");
-				ans += String(WiFi.RSSI(scni), DEC) + "]<br>\n";
-			}
-			else
-			{
-				ans = F("no ap found");
-			}
-		return ans;
-	}
-	if (san == F("wpref"))
-	{
-		if (sav == "1")
-		{
-			conf.wpref = F("LedPOI");
-			json_save();
-			return F("prefix reseted");
-		}
-		else if (sav == "0")
-		{
-			return F("name=") + conf.wpref;
-		}
-		else
-		{
-			conf.wpref = sav;
-			json_save();
-			return F("prefix saved");
-		}
-	}
-	if (san == F("wait") || san == F("spd"))
-	{
-		if (sav == "m")
-		{
-			conf.wait -= conf.wait > 1 ? 1 : 0;
-		}
-		if (sav == "p")
-		{
-			conf.wait += conf.wait < 200 ? 1 : 0;
-		}
-		int savi = sav.toInt();
-		if (savi > 0 && savi < 200)
-		{
-			conf.wait = savi;
-		}
-		EEPROM.write(EEP_WAIT, conf.wait);
-		return String(conf.wait);
-	}
-	if (san == F("brgn") || san == F("brg"))
-	{
-		String brgnwarn = "";
-		if (sav == "m")
-		{
-			conf.brgn -= conf.brgn > 8 ? 4 : 0;
-		}
-		if (sav == "p")
-		{
-			conf.brgn += conf.brgn < 128 ? 4 : 0;
-			if (conf.brgn == 128) brgnwarn = F(" max 128");
-		}
-		int savi = sav.toInt();
-		if (savi >= 4 && savi <= 128)
-		{
-			conf.brgn = savi;
-		}
-		if (savi > 128) 
-		{
-			brgnwarn = F(" max 128 < ");
-			brgnwarn += String(savi);
-		}
-		led_brgn();
-		if (stat.go == false) led_show();
-		EEPROM.write(EEP_BRGN, conf.brgn);
-		return String(conf.brgn) + brgnwarn;
-	}
-	if (san == F("go"))
-	{
-		if (stat.go == false)
-		{
-			stat.go = true;
-			if (stat.calcmax)
-			{
-				bmp_max();
-				stat.calcmax = false;
-				rootFold = fileSystem->openDir("/");
-				bmp_next();
-			}
-			if (conf.wpref == F("fan"))
-			{
-				pinMode(2, OUTPUT);
-				digitalWrite(2, HIGH);
-			}
-		}//			1					2								3								4								5									6								7									8				9
-		return (F("runned ") + String(conf.wait, DEC) + " " + String(conf.brgn, DEC) + " " + String(stat.whdr, DEC) + 					" 0 "				 +String(stat.maxprog, DEC) + 					" 0 " + 				String(stat.maxbmp, DEC) + " 0");
-	}
-	if (san == F("info"))
-	{
-		return (		"w " + String(conf.wait, DEC) +" b "+ String(conf.brgn, DEC) +" m "+ String(stat.whdr, DEC) +" p "+ String(stat.currprog + 1, DEC) + "/" + String(stat.maxprog, DEC) + " b " + String(stat.currbmp, DEC) + "/" + String(stat.maxbmp, DEC));
-	}
-	if (san == F("stp"))
-	{
-		stat.go = false;
-		led_clear();
-		led_show();
-		if (conf.wpref == F("fan")) 
-		{
-			digitalWrite(2, LOW);
-			pinMode(2, INPUT);
-		}
-		return F("stop");
-	}
-	if (san == F("btmode"))
-	{
-		if (sav == F("one"))
-		{
-			stat.loop = false;
-			return F("mode one");
-		}
-		if (sav == F("loop"))
-		{
-			stat.loop = true;
-			return F("mode loop");
-		}
-	}
 	if (san == F("mode"))
 	{
 		if (sav == "4")
@@ -391,22 +566,6 @@ String get_answ(String san, String sav)
 			EEPROM.write(EEP_WHDR, stat.whdr);
 			return F("files");
 		}
-	}
-	if (san == F("modeone"))
-	{
-		if (sav == F("next"))
-		{
-			bmp_next();
-			return stat.currname;
-		}
-		int pic = sav.toInt();
-		int step = 0;
-		while (stat.currbmp != pic && step < stat.maxbmp * 2)
-		{
-			bmp_next();
-			step++;
-		}
-		return stat.currname;
 	}
 	if (san == F("modefile"))
 	{
@@ -447,226 +606,21 @@ String get_answ(String san, String sav)
 			return F("mf nofile");
 		}
 	}
-	if (san == F("bpm"))
+	if (san == F("modeone"))
 	{
-		uint16_t savi = sav.toInt();
-		if (savi > 100 && savi < 65535)
+		if (sav == F("next"))
 		{
-			stat.bpm = savi;
-			EEPROM.write(EEP_BPM   , highByte(stat.bpm));
-			EEPROM.write(EEP_BPM + 1, lowByte(stat.bpm));
-			return (F("bpm ") + String(stat.bpm, DEC));
+			bmp_next();
+			return stat.currname;
 		}
-		else if (savi == 0)
+		int pic = sav.toInt();
+		int step = 0;
+		while (stat.currbmp != pic && step < stat.maxbmp * 2)
 		{
-			return F("bpm ") + String(stat.bpm, DEC);
+			bmp_next();
+			step++;
 		}
-		else
-		{
-			return F("bpm wrong value");
-		}
-	}
-	if (san == F("free"))
-	{
-		FSInfo fs_info;
-		fileSystem->info(fs_info);
-		return String(fs_info.totalBytes - fs_info.usedBytes, DEC);
-	}
-	if (san == F("heap"))
-	{
-		long fh = ESP.getFreeHeap();
-		char fhc[20];
-		ltoa(fh, fhc, 10);
-		return String(fhc);
-	}
-	if (san == F("format"))
-	{
-		if (stat.fcom == false)
-		{
-			fileSystem->format();
-			json_save();
-			stat.fcom = true;
-			return F("format complete");
-		}
-		else
-		{
-			return F("format already complete");
-		}
-	}
-	if (san == F("delbma"))
-	{
-		Dir rt = fileSystem->openDir("/");
-		while (rt.next())
-		{
-			String f = rt.fileName();
-			if (f.endsWith(exbma)) fileSystem->remove(f);
-		}
-		return F("done");
-	}
-	if (san == F("conf"))
-	{
-		if (fileSystem->exists("/config.txt"))
-		{
-			File cnffile = fileSystem->open("/config.txt", "r");
-			return cnffile.readStringUntil('\n');
-		}
-		else
-		{
-			String ans;
-			ans += F("prog:") + String(stat.progname);
-			ans += F(" macslen:") + String(conf.macslen) + " ";
-			char bufm[14];
-			for (int i = 0; i < conf.macslen; i++)
-			{
-				sprintf(bufm, "%02X%02X%02X%02X%02X%02X,", conf.macs[i][0],conf.macs[i][1],conf.macs[i][2],conf.macs[i][3],conf.macs[i][4],conf.macs[i][5]);
-				ans += String(bufm);
-			}
-			return ans;
-		}
-	}
-	if (san == F("delconf"))
-	{
-		json_del();
-		conf.macslen = 0;
-		return F("conf deleted");
-	}
-	if (san == F("skwf"))
-	{
-		if (sav == "1")
-		{
-			conf.skpwf = true;
-			EEPROM.write(EEP_SKPWF, 0);
-			EEPROM.commit();
-			return F("skip wait wifi on");
-		}
-		if (sav == "0")
-		{
-			conf.skpwf = false;
-			EEPROM.write(EEP_SKPWF, 1);
-			EEPROM.commit();
-			return F("skip wait wifi off");
-		}
-	}
-	if (san == F("enow"))
-	{
-		if (sav == "2")
-		{
-			EEPROM.write(EEP_ENOW, 2);
-			EEPROM.commit();
-			return F("next boot in enow");
-		}
-	}
-	if (san == F("cont"))
-	{
-		int savi = sav.toInt();
-		savi = savi > 128 ? 128 : savi;
-		conf.cont = savi;
-		led_calccont();
-		EEPROM.write(EEP_CONT, conf.cont);
-		EEPROM.commit();
-		return F("cont set ok ") + sav;
-	}
-	if (san == F("uselis"))
-	{
-		if (sav == "1")
-		{
-			conf.lis_on = true;
-			EEPROM.write(EEP_LIS, 0);
-			EEPROM.commit();
-			return F("lis On");
-		}
-		if (sav == "0")
-		{
-			conf.lis_on = false;
-			EEPROM.write(EEP_LIS, 1);
-			EEPROM.commit();
-			return F("lis Off");
-		}
-		EEPROM.commit();
-	}
-	if (san == F("hitlis"))
-	{
-		if (sav == "1")
-		{
-			conf.lis_hit = true;
-			lis_save();
-			return F("hitLis On");
-		}
-		if (sav == "0")
-		{
-			conf.lis_hit = false;
-			lis_save();
-			return F("hitLis Off");
-		}
-	}
-	if (san == F("brglis"))
-	{
-		if (sav == "1")
-		{
-			conf.lis_brgn = true;
-			lis_save();
-			return F("brgLis On");
-		}
-		if (sav == "0")
-		{
-			conf.lis_brgn = false;
-			lis_save();
-			return F("brgLis Off");
-		}
-	}
-	if (san == F("spdlis"))
-	{
-		if (sav == "1")
-		{
-			conf.lis_spd = true;
-			lis_save();
-			return F("spdLis On");
-		}
-		if (sav == "0")
-		{
-			conf.lis_spd = false;
-			lis_save();
-			return F("spdLis Off");
-		}
-	}
-	if (san == F("oldlis"))
-	{
-		if (sav == "1")
-		{
-			conf.lis_oldpcb = true;
-			lis_save();
-			return F("oldpcb Lis yes");
-		}
-		if (sav == "0")
-		{
-			conf.lis_oldpcb = false;
-			lis_save();
-			return F("oldpcb Lis no");
-		}
-	}
-	if (san == F("cmt"))
-	{
-		json_save();
-		return F("save ok");
-	}
-	if (san == F("rst"))
-	{
-		reset_conf();
-		return F("reset ok");
-	}
-	if (san == F("restart"))
-	{
-		stat.go = false;
-		return F("restart");
-	}
-	if (san == F("blink"))
-	{
-		led_blinkall();
-		return F("blink white");
-	}
-	if (san == F("prog"))
-	{
-		return stat.progname;
+		return stat.currname;
 	}
 	if (san == F("prg"))
 	{
@@ -695,42 +649,48 @@ String get_answ(String san, String sav)
 		}
 		return stat.progname;
 	}
-	return F("no ans ") + san + "=" + sav;
-}
-
-String get_answf(String san, String sav)
-{
-	int savi = sav.toInt();
-	savi = savi < 0 ? 0 : savi;
-	if (san == F("vcc"))
+	if (san == F("prog"))
 	{
-		conf.vcc = (float) savi / analogRead(A0);
-		EEPROM.put(EEP_VCC, conf.vcc);
-		EEPROM.commit();
-		return F("vcc set ok ") + sav;
+		return stat.progname;
 	}
-	savi = savi > 255 ? 255 : savi;
-	if (san == F("leds"))
+	if (san == F("restart"))
 	{
-		conf.leds = savi;
-		EEPROM.write(EEP_LEDS, conf.leds);
-		EEPROM.commit();
-		led_reinit(conf.leds);
-		return F("leds set ok ") + sav;
+		stat.go = false;
+		return F("restart");
 	}
-	if (san == F("mode"))
+	if (san == F("rst"))
 	{
-		conf.mode = savi ? true : false;
-		EEPROM.write(EEP_MODE, savi);
-		EEPROM.commit();
-		return F("mode set ok ") + sav;
+		reset_conf();
+		return F("reset ok");
 	}
-	if (san == F("fwait"))
+	if (san == F("skwf"))
 	{
-		conf.fwait = savi;
-		EEPROM.write(EEP_FWAIT, savi);
-		EEPROM.commit();
-		return F("fwait set ok ") + sav;
+		if (sav == "1")
+		{
+			conf.skpwf = true;
+			EEPROM.write(EEP_SKPWF, 0);
+			EEPROM.commit();
+			return F("skip wait wifi on");
+		}
+		if (sav == "0")
+		{
+			conf.skpwf = false;
+			EEPROM.write(EEP_SKPWF, 1);
+			EEPROM.commit();
+			return F("skip wait wifi off");
+		}
+	}
+	if (san == F("stp"))
+	{
+		stat.go = false;
+		led_clear();
+		led_show();
+		if (conf.wpref == F("fan")) 
+		{
+			digitalWrite(2, LOW);
+			pinMode(2, INPUT);
+		}
+		return F("stop");
 	}
 	if (san == F("uptime"))
 	{
@@ -742,14 +702,85 @@ String get_answf(String san, String sav)
 		}
 		return F("btest run ") + String(stat.uptime, DEC);
 	}
-	if (san == F("cont") || san == F("skwf") || san == F("uselis") || san == F("hitlis") || san == F("brglis") || san == F("spdlis") || san == F("oldlis"))
+	if (san == F("vcc"))
 	{
-		return get_answ(san, sav);
+		int savi = sav.toInt();
+		if (savi == 1)
+		{
+			int gvcc = getvcc();
+			int pr = vcc2p(gvcc);
+			return (String(pr, DEC) + F("% (") + String(getvcc(), DEC) + F("mV) ") + WiFi.RSSI());
+		}
+		else if (savi >= 100 && savi <= 5000)
+		{
+			conf.vcc = (float) savi / analogRead(A0);
+			EEPROM.put(EEP_VCC, conf.vcc);
+			EEPROM.commit();
+			return F("vcc set ok ") + sav;
+		}
+		else
+		{
+			return F("vcc fail, use 100-5000 not ") + sav;
+		}
 	}
-	if (san == F("facres"))
+	if (san == F("ver"))
 	{
-		reset_factory();
-		return F("factory reset ok (refresh page)");
+		return (conf.ver + " " + conf.wpref + "_" + String(ESP.getChipId(), HEX));
+	}
+	if (san == F("wait") || san == F("spd"))
+	{
+		if (sav == "m")
+		{
+			conf.wait -= conf.wait > 1 ? 1 : 0;
+		}
+		if (sav == "p")
+		{
+			conf.wait += conf.wait < 200 ? 1 : 0;
+		}
+		int savi = sav.toInt();
+		if (savi > 0 && savi < 200)
+		{
+			conf.wait = savi;
+		}
+		EEPROM.write(EEP_WAIT, conf.wait);
+		return String(conf.wait);
+	}
+	if (san == F("wfaps"))
+	{
+		int scn = WiFi.scanNetworks();
+		String ans = "";
+		if (scn > 0)
+			for (int scni = 0; scni < scn; ++scni)
+			{
+				ans += F("<label><input type='radio' name='ssid' value='");
+				ans += WiFi.SSID(scni) + "'>" + WiFi.SSID(scni);
+				ans += F("</label> [");
+				ans += String(WiFi.RSSI(scni), DEC) + "]<br>\n";
+			}
+			else
+			{
+				ans = F("no ap found");
+			}
+		return ans;
+	}
+	if (san == F("wpref"))
+	{
+		if (sav == "0")
+		{
+			return F("name=") + conf.wpref;
+		}
+		else if (sav == "1")
+		{
+			conf.wpref = F("LedPOI");
+			json_save();
+			return F("prefix reseted");
+		}
+		else
+		{
+			conf.wpref = sav;
+			json_save();
+			return F("prefix saved");
+		}
 	}
 	return F("no ans ") + san + "=" + sav;
 }
