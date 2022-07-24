@@ -118,7 +118,7 @@ static void add(uint16_t c){
 
 static void decode(uint16_t idx, bool start)
 {
-	if (idx == colorslen || idx == colorslen + 1) return;
+	//if (idx == colorslen || idx == colorslen + 1) return;
 	//yield();
 	//Serial.printf("dec %04d dict %04d\n" , idx, dictlen / 2 + colorslen + 2);
 	if (start) //decode first pixel
@@ -142,7 +142,8 @@ static void decode(uint16_t idx, bool start)
 
 static void extract(uint8_t len)
 {
-	Serial.printf("extr %d ", len);
+	//Serial.printf("extr %d ", len);
+	if (len == 255) Serial.write('.'); else Serial.print(len);
 	static bool reinit = true;
 	for(int i = 0; i < len * 8; i++)
 	{
@@ -151,7 +152,7 @@ static void extract(uint8_t len)
 		bi++;
 		if (bi == lz)
 		{
-			if (bt == colorslen)
+			if (bt == colorslen) //clear code
 			{
 				dictlen = 0;
 				lz = lzb;
@@ -160,6 +161,12 @@ static void extract(uint8_t len)
 				last = 0;
 				reinit = true;
 				continue;
+			}
+			if (bt == colorslen + 1) //stop code
+			{
+				bi = 0;
+				bt = 0;
+				break;
 			}
 			decode(bt, reinit);
 			bi = 0;

@@ -1369,6 +1369,10 @@ void handleFileDelete()
 	path = String();
 }
 
+void ftp_calb(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){
+	if (ftpOperation == FTP_FREE_SPACE_CHANGE) stat.calcmax = true;
+}
+
 void http_begin()
 {
 	server.on(F("/"), handleRoot);
@@ -1398,6 +1402,7 @@ void http_begin()
 	server.onNotFound(handleNotFound);
 	server.begin();
 	Serial.println(F("HTTP server started"));
+	ftpSrv.setCallback(ftp_calb);
 	ftpSrv.begin("Welcome!");
 	Serial.println(F("FTP server started"));
 }
