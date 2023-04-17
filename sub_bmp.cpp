@@ -20,7 +20,7 @@ void bmp_max()
 	while (rt.next())
 	{
 		String f = rt.fileName();
-		if (f.endsWith(exbmp) || f.endsWith(exgif) || f.endsWith(exjpg)) p++;
+		if (bmp_check(f)) p++;
 		if (f.startsWith("prog") && f.endsWith(extxt))
 		{
 			if (f == stat.progname)
@@ -43,6 +43,11 @@ void bmp_max()
 	Serial.printf("maxbmp %d prog %d %dms\n", p, pm, millis()-st);
 	stat.maxprog = pm;
 	stat.maxbmp = p;
+}
+
+bool bmp_check(String f)
+{
+	return (f.endsWith(exbmp) || f.endsWith(exgif) || f.endsWith(exjpg));
 }
 
 void bmp_next()

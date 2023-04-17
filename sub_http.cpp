@@ -132,7 +132,8 @@ td {padding: 0 10px}
 <a href='/files'>files</a>   
 <a href='/progs'>progs</a>   
 <a href='/prog'>prog</a>   
-<a href='/lis'>lis</a>
+<a href='/lis'>lis</a>   
+<a href='/config'>conf</a>
 
 <br><br>
 
@@ -193,7 +194,6 @@ td {padding: 0 10px}
 
 <span onclick="r('conf')">show conf  </span><span id=conf></span><br><br>
 
-<a href='/config'>настройки</a><br><br>
 <a href='/update'>обновление</a>   <a href='/fs.bin'>fs.bin</a><br><br>
 
 <script>
@@ -246,6 +246,7 @@ static const char content_files1[] PROGMEM = R"=====(
 <head>
 <title>poi files</title><meta charset='UTF-8'>
 <style>
+input {margin:0 5px 5px 0;}
 tr.cn {display: none}
 td {padding: 0 10px}
 table.pc tr td {width: 3px;height: 3px;padding: 0 0px}
@@ -393,15 +394,14 @@ void handleFiles()
 		ans += fileSize == 0 ? F(" style='background:#fcc;'>") : F(">");
 		ans += String(fileSize);
 		ans += F("</td><td>");
-		if (fileName.endsWith(exbmp) || fileName.endsWith(exgif) || fileName.endsWith(exjpg))
+		if (bmp_check(fileName))
 		{
-			nr++;
 			ans += F("<input type='checkbox' name='psel' value='");
 			ans += fileName;
 			ans += F("'>");
 		}
 		ans += F("</td>");
-		
+		if (!fileName.endsWith(exbma)) nr++;
 		if (fileName.endsWith(exbmp) || fileName.endsWith(exbma))
 		{
 			ans += F("<td ");
@@ -532,7 +532,7 @@ void handleFilesap()
 	while (dir.next())
 	{
 		String fileName = dir.fileName();
-		if (fileName.endsWith(exbmp) || fileName.endsWith(exgif) || fileName.endsWith(exjpg))
+		if (bmp_check(fileName))
 		{
 			struct bmpheader hd = bmp_header(fileName);
 			server.sendContent(F("<tr><td>") + String(filen, DEC) + F("<td onClick='showAndroidToast(\"") + fileName + "&" + String(filen, DEC) + F("\")'>") + fileName + F("</td>"));
@@ -554,7 +554,7 @@ void handlePics()
 	while (dir.next())
 	{
 		String fileName = dir.fileName();
-		if (fileName.endsWith(exbmp) || fileName.endsWith(exgif) || fileName.endsWith(exjpg) || (server.args() == 1 && server.argName(0) == "all"))
+		if (bmp_check(fileName) || (server.args() == 1 && server.argName(0) == "all"))
 		{
 			if (filen)
 				server.sendContent("\n" + fileName);
@@ -762,7 +762,7 @@ static const char content_lis[] PROGMEM = R"=====(
 <a href='/prog'>prog</a>   
 <a href='/lis'>lis</a>
 
-&nbsp&nbsp&nbspmax:<span id=max></span><br><br>
+   max:<span id=max></span><br><br>
 
 <canvas id=can></canvas>
 <script>
@@ -821,7 +821,7 @@ static const char content_prog[] PROGMEM = R"=====(
 <head>
 <title>poi prog</title><meta charset='UTF-8'>
 <script src='prog.js'></script>
-<style>img,input {margin-right: 5px;}</style>
+<style>img,input,select {margin:0 5px 5px 0;}</style>
 </head>
 <body>
 <a href='/'>main</a>   
@@ -839,10 +839,10 @@ prog <input type='button' value='load' onClick='lp()'><input type='button' value
 pics <input type='button' value='clear' onClick='if(confirm("del all?")) ws.clearRegions()'><label><input type='checkbox' id='delrc'>del by click</label>
 <div style='width:100%;overflow:scroll;'><table id='pcs'></table></div><br>
 
-<select id='progs' onchange='loadf(this.value)'></select>
+<select id='progs' onchange='loadf(this.value)'></select><input type='button' value='del' onclick='delp()'>
 <br>
 <form method='POST'>
-name <input name='progn' id='progn' maxlength=25 onkeyup='this.value = this.value.replace(/[^A-Za-z0-9_.]/g, "")'><br>
+name <input name='progn' id='progn' maxlength=20 onkeyup='this.value = this.value.replace(/[^A-Za-z0-9_.]/g, "")'><br>
 <textarea name='prog' id='prog' rows=20 cols=30></textarea><br>
 <input type='button' value='save' onclick='savep()'>
 </form>
@@ -953,6 +953,15 @@ async function savep(){
 	let t=await r.text();
 	loads(document.getElementById('progn').value);
 	alert(t);
+}
+function delp(){
+	var a = document.getElementById('progs');
+	var v = a.value, i = a.selectedIndex;
+	var t = a.options[i].text;
+	var q = confirm('delete '+t+' ?');
+	console.log(a.selectedIndex);
+	if (q) a.remove(i);
+	console.log(a.selectedIndex);
 }
 )=====";
 
@@ -1069,8 +1078,11 @@ void handleProgs()
 				pic = prgfile.readStringUntil('\n');
 				int spidx = pic.lastIndexOf(" ");
 				if (spidx == -1 || spidx == pic.length() - 1)
-					{
-					server.sendContent(F("<tr><td colspan=4>") + pic + F("<br>prog err: no second arg</td></tr>\n"));
+				{
+					if (pic == "stop")
+						server.sendContent(F("<tr><td></td><td>stop</td>\n"));
+					else
+						server.sendContent(F("<tr><td colspan=4>") + pic + F("<br>prog err: no second arg</td></tr>\n"));
 				}
 				else
 				{
@@ -1346,7 +1358,7 @@ void handleFileDelete()
 	if (!fileSystem->exists(path)) {
 		return server.send(404, textplain, F("FileNotFound"));
 	}
-	if(path.endsWith(exbmp) || path.endsWith(exgif) || path.endsWith(exjpg))
+	if(bmp_check(path))
 	{
 		fileSystem->remove(path);
 		String newname = path.substring(0, path.length() - 3);

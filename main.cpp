@@ -25,7 +25,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.37",
+	"v0.37a",
 	"LedPOI",
 	{}, //macs
 	0, //macson

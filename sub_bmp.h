@@ -24,6 +24,7 @@ struct bmpheader
 #pragma pack(pop)
 
 void bmp_max();
+bool bmp_check(String f);
 void bmp_next();
 void bmp_draw(String pathsrc, unsigned long tm);
 void bmp_draw(String path);
