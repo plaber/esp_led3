@@ -45,6 +45,7 @@ struct status
 	String progname;
 	char proglist[15][32];
 	bool calcmax;
+	uint8_t enrgsv;
 };
 
 extern struct config conf;

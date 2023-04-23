@@ -188,8 +188,9 @@ String get_answ(String san, String sav)
 		{
 			brgnwarn = F(" max 128 < ");
 			brgnwarn += String(savi);
+			
 		}
-		led_brgn();
+		if (sav != "0") led_brgn();
 		if (stat.go == false) led_show();
 		EEPROM.write(EEP_BRGN, conf.brgn);
 		return String(conf.brgn) + brgnwarn;
@@ -560,12 +561,16 @@ String get_answ(String san, String sav)
 			EEPROM.write(EEP_WHDR, stat.whdr);
 			return F("prog");
 		}
-		else
+		else if (sav == "3")
 		{
 			stat.whdr = 3;
 			EEPROM.write(EEP_WHDR, stat.whdr);
 			return F("files");
 		}
+		else if(stat.whdr == 4)
+			return F("prog");
+		else
+			return F("files");
 	}
 	if (san == F("modefile"))
 	{
@@ -652,6 +657,12 @@ String get_answ(String san, String sav)
 	if (san == F("prog"))
 	{
 		return stat.progname;
+	}
+	if (san == F("progs"))
+	{
+		String pl = "";
+		for(int i = 0; i < stat.maxprog; i++) pl += String(stat.proglist[i]) + (i + 1 == stat.maxprog ? "" : ",");
+		return pl;
 	}
 	if (san == F("restart"))
 	{

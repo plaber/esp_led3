@@ -143,7 +143,7 @@ td {padding: 0 10px}
 	<tr><td>maca</td><td id=maca></td></tr>
 	<tr><td>vcc</td><td id=vcc onclick="r('vcc')"></td></tr>
 	<tr><td>heap</td><td id='heap' onclick="r('heap')"></td></tr>
-	<tr><td>prog</td><td id='prog' onclick="r('prog')"></td></tr>
+	<tr><td>prog</td><td><select id='progs'></select> <input type='button' value='ok' onclick="r('prg',vl('progs'));"></td></tr>
 	</table><br><br>
 
 <table border=1><caption>управление</caption>
@@ -155,13 +155,17 @@ td {padding: 0 10px}
 		<td><button onclick="r('brgn','m')">-</button></td>
 		<td id=brgn></td>
 		<td><button onclick="r('brgn','p')">+</button></td></tr>
+	<tr><td>режим</td>
+		<td><button onclick="r('mode','3')">файлы</button></td>
+		<td><button onclick="r('mode','4')">программа</button></td>
+		<td id=mode></td></tr>
 	<tr><td>запуск</td>
 		<td><button onclick="r('go')">go</button></td>
 		<td><button onclick="r('stp')">stop</button></td>
 		<td id=go></td></tr>
 	<tr><td>настройки</td>
 		<td><button onclick="r('cmt')">сохранить</button></td>
-		<td><button onclick="r('rst')">сбросить</button></td>
+		<td><button onclick="if(confirm('сброс?'))r('rst')">сбросить</button></td>
 		<td><span id=rst></span> <span id=cmt></span></td></tr>
 	<tr><td>перезагрузка</td>
 		<td colspan=2><button onclick="r('restart')">сбросить</button></td>
@@ -202,10 +206,22 @@ function vr(nm){var ra=document.getElementsByName(nm);for(var i=0;i<ra.length;i+
 function r(p,v){
 	fetch('/req?'+p+'='+(v?v:'1'))
 	.then((response) => {return response.text();})
-	.then((data) => {document.getElementById(p).innerHTML = data;});
+	.then((data) => {var e=document.getElementById(p); if(e) e.innerHTML = data;});
 }
-r('wfaps');
-function load(v){for(var key in v){var el = document.getElementById(key); el.innerHTML = v[key];}}
+function load(v){
+	for(var key in v){
+		var el = document.getElementById(key);
+		if(!el) continue;
+		if(el.tagName=='SELECT'){
+			ms = v[key].split(',');
+			for(var i=0;i<ms.length;i++){
+				el.options[el.options.length] = new Option(ms[i], i+1);
+				if(ms[i]==v.prog) {el.selectedIndex = i;}
+			}
+		}
+		else el.innerHTML = v[key];
+	}
+}
 function sh_pw(t){
 	var i=document.getElementById('pass');
 	if (i.getAttribute('type')=='password'){
@@ -217,9 +233,9 @@ function sh_pw(t){
 	}
 	return false;
 };
-fetch('/req?ver=1&ip=1&mac=1&maca=1&vcc=1&wait=0&brgn=0&heap=1&prog=1')
+fetch('/req?ver=1&ip=1&mac=1&maca=1&vcc=1&wait=0&brgn=0&mode=0&heap=1&prog=1&progs=1')
 		.then((response) => {return response.json();})
-		.then((data) => {load(data);})
+		.then((data) => {load(data);r('wfaps');})
 </script>
 </body></html>
 )=====";
@@ -957,11 +973,13 @@ async function savep(){
 function delp(){
 	var a = document.getElementById('progs');
 	var v = a.value, i = a.selectedIndex;
+	if (i == -1) return;
 	var t = a.options[i].text;
 	var q = confirm('delete '+t+' ?');
-	console.log(a.selectedIndex);
-	if (q) a.remove(i);
-	console.log(a.selectedIndex);
+	if(q) fetch('/del?f='+encodeURI('prog_'+v+'.txt'))
+		.then((response) => {return response.text();})
+		.then((data) => {alert(data);if(data.indexOf('<br>ok')!=-1){a.remove(i); a.onchange();}
+	})
 }
 )=====";
 
@@ -979,6 +997,7 @@ void handleProg()
 		prgfile.print(server.arg(1));
 		prgfile.close();
 		server.send(200, textplain, F("saved file: ") + fname + F("\r\n") + server.arg(1));
+		bmp_max();
 		return;
 	}
 	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
@@ -1365,17 +1384,18 @@ void handleFileDelete()
 		if (fileSystem->exists(newname + "bma")) 
 		{
 			fileSystem->remove(newname + "bma");
-			server.send(200, texthtml, F("<a href='/files'>back</a><br>ok, bma deleted"));
+			server.send(200, texthtml, F("ok, bma deleted"));
 		}
 		else
 		{
-			server.send(200, texthtml, F("<a href='/files'>back</a><br>ok"));
+			server.send(200, texthtml, F("ok"));
 		}
 		stat.calcmax = true;
 	}
 	else
 	{
 		fileSystem->remove(path);
+		if (path.startsWith("prog") && path.endsWith(extxt)) bmp_max();
 		server.send(200, texthtml, F("<a href='/files'>back</a><br>ok"));
 	}
 	path = String();

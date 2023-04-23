@@ -25,7 +25,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.37a",
+	"v0.38",
 	"LedPOI",
 	{}, //macs
 	0, //macson
@@ -63,7 +63,8 @@ struct status stat = {
 	0, //curr prog
 	"no_prog", //curr prog name
 	0, //proglist
-	false //calcmax
+	false, //calcmax
+	0 //enrgsv
 };
 
 Dir rootFold;
@@ -197,6 +198,11 @@ void loop()
 {
 	if (stat.go)
 	{
+		if(stat.enrgsv == 1)
+		{
+			led_brgn(conf.brgn);
+			stat.enrgsv = 2;
+		}
 		if (stat.whdr == 3)
 		{
 			if (stat.loop)
@@ -266,5 +272,11 @@ void loop()
 		bmp_net();
 		//http_poll();
 		ftp_poll();
+		if (stat.enrgsv == 0 && millis() > 20000)
+		{
+			led_brgn(8);
+			led_show();
+			stat.enrgsv = 1;
+		}
 	}
 }
