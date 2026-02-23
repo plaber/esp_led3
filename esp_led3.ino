@@ -12,5 +12,6 @@ SimpleFTPServer https://github.com/xreef/SimpleFTPServer
 Arduino_JSON by Arduino https://github.com/arduino-libraries/Arduino_JSON
 Adafruit LIS3DH by Adafruit https://github.com/adafruit/Adafruit_LIS3DH
 Adafruit Unified Sensor by Adafruit https://github.com/adafruit/Adafruit_Sensor
+GyverButton by AlexGyver https://github.com/GyverLibs/GyverButton
 
 */

@@ -14,7 +14,7 @@
 #define EEP_VCC  4 //4 bytes
 #define EEP_BTN1 8 //NOT USING
 #define EEP_LEDS 9
-#define EEP_DCHR 10 //NOT USING
+#define EEP_LOOP 10 //btn mode
 #define EEP_SKPWF 11 //skip wifi
 #define EEP_ENOW  12 //esp now on/off
 #define EEP_FWAIT  13 //file delay micros

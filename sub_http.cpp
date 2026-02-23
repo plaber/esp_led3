@@ -806,7 +806,7 @@ function am(ar){return Math.max.apply(null, ar);}
 
 void handleLis()
 {
-	extern long lisd[1000];
+	extern int32_t *lisd;
 	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
 	server.send(200, texthtml, content_lis);
 	if (stat.lis_found == false)

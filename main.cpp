@@ -25,7 +25,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.38",
+	"v0.39",
 	"LedPOI",
 	{}, //macs
 	0, //macson
@@ -71,7 +71,7 @@ Dir rootFold;
 
 void setup()
 {
-	pinMode(4, INPUT_PULLUP); //init mosfet button
+	//pinMode(4, INPUT_PULLUP); //init mosfet button
 	pinMode(5, OUTPUT);
 	digitalWrite(5, LOW);
 	

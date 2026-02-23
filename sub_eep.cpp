@@ -60,6 +60,7 @@ void print_conf()
 	Serial.print(F("brgn ")); Serial.println(conf.brgn);
 	Serial.print(F("dir ")); Serial.println(conf.dir);
 	Serial.print(F("whdr ")); Serial.println(stat.whdr);
+	Serial.print(F("loop ")); Serial.println(stat.loop);
 	Serial.print(F("vcc  ")); Serial.println(conf.vcc);
 	Serial.print(F("leds ")); Serial.println(conf.leds);
 	Serial.print(F("skpwf ")); Serial.println(conf.skpwf);
@@ -87,6 +88,7 @@ void eep_load()
 	}
 	if (EEPROM.read(EEP_DIR) == 0) conf.dir = false; else conf.dir = true;
 	if (EEPROM.read(EEP_WHDR) == 4) stat.whdr = 4; else stat.whdr = 3;
+	if (EEPROM.read(EEP_LOOP) == 0) stat.loop = false; else stat.loop = true;
 	conf.leds = EEPROM.read(EEP_LEDS); if(!conf.leds) conf.leds = 32;
 	EEPROM.get(EEP_VCC, conf.vcc);
 	conf.fwait = EEPROM.read(EEP_FWAIT);
@@ -200,11 +202,13 @@ String get_answ(String san, String sav)
 		if (sav == F("one"))
 		{
 			stat.loop = false;
+			EEPROM.write(EEP_LOOP, stat.loop);
 			return F("mode one");
 		}
 		if (sav == F("loop"))
 		{
 			stat.loop = true;
+			EEPROM.write(EEP_LOOP, stat.loop);
 			return F("mode loop");
 		}
 	}

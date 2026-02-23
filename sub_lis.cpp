@@ -16,8 +16,8 @@
 
 Adafruit_LIS3DH lis;
 bool lis_found = false;
-long *lisd;
-long lisx = 0, lisy = 0, lisz = 0, lisxp = 0;
+int32_t *lisd;
+int16_t lisx = 0, lisy = 0, lisz = 0, lisxp = 0;
 
 void lis_init()
 {
@@ -33,22 +33,23 @@ void lis_init()
 	}
 	if (lis.begin(0x18))
 	{
-		lisd = (long*)realloc(lisd, LIS_SIZE * sizeof(long));
+		lisd = (int32_t*)realloc(lisd, LIS_SIZE * sizeof(int32_t));
 		stat.lis_found = true;
 		lis.setRange(LIS3DH_RANGE_16_G);
 		//lis.setScale(lis3dh_scale_4_g);
+		Serial.println("lis found");
 	}
 }
 
 void lis_fill()
 {
 	lis.read();
-	long ax = lis.x, ay = lis.y, az = lis.z;
+	int16_t ax = lis.x, ay = lis.y, az = lis.z;
 	lisxp = lisx;
 	lisx = ax;
 	lisy = ay;
 	lisz = az;
-	long ab = abs(ax) + abs(ay) + abs(az);
+	int32_t ab = abs(ax) + abs(ay) + abs(az); 
 	for (int a = 0; a < LIS_SIZE - 1; a++) lisd[a] = lisd[a + 1];
 	lisd[LIS_SIZE - 1] = ab;
 }

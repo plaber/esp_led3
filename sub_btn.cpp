@@ -1,5 +1,6 @@
 #include "sub_btn.h"
 #include "conf.h"
+#include "sub_bmp.h"
 #include "sub_eep.h"
 #include "sub_http.h"
 #include "sub_json.h"
@@ -9,37 +10,136 @@
 extern FS* fileSystem;
 
 int onoff = 0, offp = 0;
-unsigned long offm = 0;
+
+GButton butt1(4);
 
 void check_off()
 {
-	if (digitalRead(4) == HIGH) {
+	butt1.tick();
+	if (butt1.isStep() && onoff == 1 && offp < 3) { offp++; Serial.printf("OFF %d\n", offp); }
+	if (butt1.isRelease())
+	{
+		offp = 0;
 		if (onoff == 0)
 		{
 			onoff = 1;
 			Serial.println(F("released"));
 		}
-		if (offp > 0 && offm != millis())
-		{
-			offp -= 1;
-			offm = millis();
-		}
 	}
-	if (digitalRead(4) == LOW && onoff == 1)
+	if (onoff == 1)
 	{
-		if (offm != millis())
+		if (offp == 1 || offp == 2)
 		{
-			offp += offm == 0 ? 3 : (millis() - offm);
-			offm = millis();
+			stat.go = false;
+			RgbColor dwhite(50, 50, 50);
+			led_clear();
+			led_setpx(0, dwhite);
+			led_show();
 		}
-		Serial.printf("OFF %d / %d\n", offp, 1000);
-		if (offp > 1000)
+		if (offp == 3)
 		{
 			digitalWrite(5, HIGH);
 			pinMode(5, INPUT);
-			led_brgn(4);
+			RgbColor dred(50, 0, 0);
+			led_clear();
+			led_setpx(0, dred);
 			led_show();
 		}
+	}
+	if (butt1.isSingle())
+	{
+		if (stat.go == false)
+		{
+			Serial.println(get_answ("go","1"));
+		}
+		else if (stat.whdr == 3 && stat.loop == false)
+		{
+			bmp_next();
+		}
+		else if (stat.whdr == 4)
+		{
+			if (stat.currprog < stat.maxprog - 1)
+			{
+				stat.currprog++;
+			}
+			else
+			{
+				stat.currprog = 0;
+			}
+			stat.progname = String(stat.proglist[stat.currprog]);
+			stat.currname = "a";
+			Serial.println(stat.progname);
+		}
+	}
+	if (butt1.isDouble())
+	{
+		if (stat.whdr == 3 && stat.loop == false)
+		{
+			int prevn = 0;
+			if (stat.currbmp > 1) prevn = stat.currbmp - 1; else prevn = stat.maxbmp;
+			while (stat.currbmp != prevn) bmp_next();
+		}
+		else if (stat.whdr == 4)
+		{
+			if (stat.currprog > 0)
+			{
+				stat.currprog--;
+			}
+			else
+			{
+				stat.currprog = stat.maxprog - 1;
+			}
+			stat.progname = String(stat.proglist[stat.currprog]);
+			stat.currname = "a";
+			Serial.println(stat.progname);
+		}
+	}
+	RgbColor green(0, 255, 0);
+	if (butt1.isTriple())
+	{
+		if (stat.whdr == 3 && stat.loop == true)
+		{
+			stat.loop = false;
+			Serial.println("pics one");
+			led_clear();
+			led_setpx(0, green);led_setpx(1, green);
+			led_show();
+			delay(300);
+		}
+		else if (stat.whdr == 3 && stat.loop == false)
+		{
+			led_clear();
+			if (stat.maxprog > 0)
+			{
+				stat.whdr = 4;
+				Serial.println("prog");
+				led_setpx(0, green);led_setpx(1, green);led_setpx(2, green);
+			}
+			else
+			{
+				stat.whdr = 3;
+				stat.loop = true;
+				Serial.println("pics all");
+				led_setpx(0, green);
+			}
+			led_show();
+			delay(300);
+		}
+		else if (stat.whdr == 4)
+		{
+			stat.whdr = 3;
+			stat.loop = true;
+			Serial.println("pics all");
+			led_clear();
+			led_setpx(0, green);
+			led_show();
+			delay(300);
+		}
+		EEPROM.write(EEP_WHDR, stat.whdr);
+		EEPROM.write(EEP_LOOP, stat.loop);
+		char ebuf[32];
+		memset(ebuf, 0, 32); stat.progname.toCharArray(ebuf, 32); EEPROM.put(EEP_PG, ebuf);
+		EEPROM.commit();
 	}
 }
 
@@ -48,17 +148,21 @@ void check_up()
 	int showUp = 0;
 	led_setpx(0, 128, 128, 128);
 	led_show();
-	while (digitalRead(4) == LOW && showUp < 20)
+	butt1.tick();
+	while (butt1.state() && showUp < 20)
 	{
 		delay(50);
 		showUp++;
+		butt1.tick();
 	}
-	if (digitalRead(4) == LOW)
+	if (butt1.state())
 	{
+		butt1.tick();
 		led_brgn(12);
 		int pixBut = -1;
-		while (pixBut < 31 && digitalRead(4) == LOW)
+		while (pixBut < 31 && butt1.state())
 		{
+			butt1.tick();
 			pixBut++;
 			if (pixBut == 4)
 			{
