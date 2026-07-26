@@ -24,7 +24,8 @@
 #define EEP_CONT 17 //contrast
 #define EEP_SKPWC 18 //skip wifi connect
 #define EEP_BPM 19 //2 bytes
-#define EEP_MCL 21
+#define EEP_MCL 21 //macs len
+#define EEP_SMB 22 //smart button
 
 #define EEP_SD1 32
 #define EEP_PS1 64

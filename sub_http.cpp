@@ -163,6 +163,10 @@ td {padding: 0 10px}
 		<td><button onclick="r('go')">go</button></td>
 		<td><button onclick="r('stp')">stop</button></td>
 		<td id=go></td></tr>
+	<tr><td>умная кнопка</td>
+		<td><button onclick="r('bs','1')">on</button></td>
+		<td><button onclick="r('bs','0')">off</button></td>
+		<td id=bs></td></tr>
 	<tr><td>настройки</td>
 		<td><button onclick="r('cmt')">сохранить</button></td>
 		<td><button onclick="if(confirm('сброс?'))r('rst')">сбросить</button></td>
@@ -233,7 +237,7 @@ function sh_pw(t){
 	}
 	return false;
 };
-fetch('/req?ver=1&ip=1&mac=1&maca=1&vcc=1&wait=0&brgn=0&mode=0&heap=1&prog=1&progs=1')
+fetch('/req?ver=1&ip=1&mac=1&maca=1&vcc=1&wait=0&brgn=0&mode=0&heap=1&prog=1&progs=1&bs=2')
 		.then((response) => {return response.json();})
 		.then((data) => {load(data);r('wfaps');})
 </script>
@@ -1280,7 +1284,9 @@ void handleConfig()
 		}
 		EEPROM.commit();
 	}
-	server.sendContent(F("<table border=1><tr>"));
+	server.sendContent(F("<table border=1><tr><td></td>"));
+	for (int i = 0; i < 32; i++) server.sendContent(F("<td>") + String(i,DEC) + F("</td>"));
+	server.sendContent(F("</tr><tr>\n"));
 	for (int i = 0; i < EEP_SIZE; i++)
 	{
 		if (i % 32 == 0) server.sendContent(F("<td>") + String(i,DEC) + F("</td>"));
@@ -1300,7 +1306,7 @@ void handleConfig()
 		{
 			server.sendContent(F("<td>") + String(c, HEX) + F("</td>"));
 		}
-		if ((i + 1) % 32 == 0) server.sendContent(F("</tr><tr>"));
+		if ((i + 1) % 32 == 0) server.sendContent(F("</tr><tr>\n"));
 	}
 	server.sendContent(F("</tr></table>"));
 	server.sendContent(content_conf2);

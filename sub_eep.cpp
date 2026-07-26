@@ -89,7 +89,7 @@ void eep_load()
 	if (EEPROM.read(EEP_DIR) == 0) conf.dir = false; else conf.dir = true;
 	if (EEPROM.read(EEP_WHDR) == 4) stat.whdr = 4; else stat.whdr = 3;
 	if (EEPROM.read(EEP_LOOP) == 0) stat.loop = false; else stat.loop = true;
-	conf.leds = EEPROM.read(EEP_LEDS); if(!conf.leds) conf.leds = 32;
+	conf.leds = EEPROM.read(EEP_LEDS); if(!conf.leds || conf.leds == 51) conf.leds = 32;
 	EEPROM.get(EEP_VCC, conf.vcc);
 	conf.fwait = EEPROM.read(EEP_FWAIT);
 	if (conf.fwait == 0) conf.fwait = 10;
@@ -105,6 +105,7 @@ void eep_load()
 		conf.skpwc =true;
 		conf.enow = true;
 	}
+	if (EEPROM.read(EEP_SMB) == 1) conf.smartbtn = true; else conf.smartbtn = false;
 	if (EEPROM.read(EEP_LIS) > 0) conf.lis_on = false; else conf.lis_on = true;
 	uint16_t bpm = word(EEPROM.read(EEP_BPM), EEPROM.read(EEP_BPM + 1));
 	if (bpm > 100) stat.bpm = bpm; else stat.bpm = 4000;
@@ -196,6 +197,20 @@ String get_answ(String san, String sav)
 		if (stat.go == false) led_show();
 		EEPROM.write(EEP_BRGN, conf.brgn);
 		return String(conf.brgn) + brgnwarn;
+	}
+	if (san == F("bs"))
+	{
+		if (sav == F("1"))
+		{
+			conf.smartbtn = true;
+			EEPROM.write(EEP_SMB, 1);
+		}
+		if (sav == F("0"))
+		{
+			conf.smartbtn = false;
+			EEPROM.write(EEP_SMB, 0);
+		}
+		return conf.smartbtn ? F("on") : F("off");
 	}
 	if (san == F("btmode"))
 	{

@@ -5,7 +5,7 @@ http://arduino.esp8266.com/stable/package_esp8266com_index.json
 https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
 required librares:
-NeoPixelBus by Makuna https://github.com/Makuna/NeoPixelBus
+NeoPixelBus by Makuna https://github.com/Makuna/NeoPixelBus 2.7.7
 WifiEspNow by Junxiao Shi https://github.com/yoursunny/WifiEspNow
 TJpgDecoder https://github.com/Bodmer/TJpg_Decoder
 SimpleFTPServer https://github.com/xreef/SimpleFTPServer

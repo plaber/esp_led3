@@ -25,7 +25,7 @@ char exjpg[5] = ".jpg";
 char extxt[5] = ".txt";
 
 struct config conf = {
-	"v0.39",
+	"v0.40",
 	"LedPOI",
 	{}, //macs
 	0, //macson
@@ -37,6 +37,7 @@ struct config conf = {
 	5, //vcc
 	190, //fwait
 	0, //contrast
+	false, //smartbtn 
 	false, //skip wifi conn wait
 	false, //skip wifi conn begin
 	false, //enow

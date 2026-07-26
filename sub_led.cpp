@@ -8,6 +8,7 @@ NeoPixelBrightnessBus<NeoGrbFeature, NeoEsp8266Dma800KbpsMethod>* strip = NULL;
 
 RgbColor black(0, 0, 0);
 RgbColor white(255, 255, 255);
+RgbColor dwhite(128, 128, 128);
 RgbColor red(255, 0, 0);
 RgbColor dred(128, 0, 0);
 RgbColor yellow(255, 255, 0);
@@ -161,17 +162,27 @@ void led_drawvcc()
 {
 	//draw vcc
 	int v = getvcc();
-	if (v > 3200) led_setpx(conf.leds - 1, dred);
-	if (v > 3300) led_setpx(conf.leds - 1, red);
-	if (v > 3400) led_setpx(conf.leds - 2, red);
-	if (v > 3500) led_setpx(conf.leds - 3, yellow);
-	if (v > 3600) led_setpx(conf.leds - 4, yellow);
-	if (v > 3700) led_setpx(conf.leds - 5, yellow);
-	if (v > 3800) led_setpx(conf.leds - 6, green);
-	if (v > 3900) led_setpx(conf.leds - 7, green);
-	if (v > 4000) led_setpx(conf.leds - 8, green);
-	if (v > 4100) led_setpx(conf.leds - 9, wgreen);
-	if (v > 4200) led_setpx(conf.leds - 10,wgreen);
+	if (conf.leds < 32)
+	{
+		if (v > 3400) led_setpx(conf.leds - 1, red);
+		if (v > 3700) led_setpx(conf.leds - 2, yellow);
+		if (v > 3900) led_setpx(conf.leds - 3, green);
+		if (v > 4100) led_setpx(conf.leds - 4, wgreen);
+	}
+	else
+	{
+		if (v > 3200) led_setpx(conf.leds - 1, dred);
+		if (v > 3300) led_setpx(conf.leds - 1, red);
+		if (v > 3400) led_setpx(conf.leds - 2, red);
+		if (v > 3500) led_setpx(conf.leds - 3, yellow);
+		if (v > 3600) led_setpx(conf.leds - 4, yellow);
+		if (v > 3700) led_setpx(conf.leds - 5, yellow);
+		if (v > 3800) led_setpx(conf.leds - 6, green);
+		if (v > 3900) led_setpx(conf.leds - 7, green);
+		if (v > 4000) led_setpx(conf.leds - 8, green);
+		if (v > 4100) led_setpx(conf.leds - 9, wgreen);
+		if (v > 4200) led_setpx(conf.leds - 10,wgreen);
+	}
 	led_show();
 }
 

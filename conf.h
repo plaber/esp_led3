@@ -17,6 +17,7 @@ struct config
 	float vcc;
 	uint8_t fwait;
 	uint8_t cont;
+	bool smartbtn;
 	bool skpwf;
 	bool skpwc;
 	bool enow;

@@ -8,6 +8,8 @@
 #include "sub_wifi.h"
 
 extern FS* fileSystem;
+extern RgbColor dwhite;
+extern RgbColor dred;
 
 int onoff = 0, offp = 0;
 
@@ -16,7 +18,16 @@ GButton butt1(4);
 void check_off()
 {
 	butt1.tick();
-	if (butt1.isStep() && onoff == 1 && offp < 3) { offp++; Serial.printf("OFF %d\n", offp); }
+	if (butt1.isStep() && onoff == 1 && offp < 3)
+	{
+		offp++;
+		Serial.printf("OFF %d\n", offp);
+		if (offp == 3)
+		{
+			led_brgn(4);
+			led_show();
+		}
+	}
 	if (butt1.isRelease())
 	{
 		offp = 0;
@@ -30,23 +41,24 @@ void check_off()
 	{
 		if (offp == 1 || offp == 2)
 		{
-			stat.go = false;
-			RgbColor dwhite(50, 50, 50);
-			led_clear();
-			led_setpx(0, dwhite);
-			led_show();
+			if (conf.smartbtn == true)
+			{
+				stat.go = false;
+				led_clear();
+				led_setpx(0, dwhite);
+				led_show();
+			}
 		}
 		if (offp == 3)
 		{
 			digitalWrite(5, HIGH);
 			pinMode(5, INPUT);
-			RgbColor dred(50, 0, 0);
 			led_clear();
 			led_setpx(0, dred);
 			led_show();
 		}
 	}
-	if (butt1.isSingle())
+	if (butt1.isSingle() && conf.smartbtn == true)
 	{
 		if (stat.go == false)
 		{
@@ -71,7 +83,7 @@ void check_off()
 			Serial.println(stat.progname);
 		}
 	}
-	if (butt1.isDouble())
+	if (butt1.isDouble() && conf.smartbtn == true)
 	{
 		if (stat.whdr == 3 && stat.loop == false)
 		{
@@ -95,7 +107,7 @@ void check_off()
 		}
 	}
 	RgbColor green(0, 255, 0);
-	if (butt1.isTriple())
+	if (butt1.isTriple() && conf.smartbtn == true)
 	{
 		if (stat.whdr == 3 && stat.loop == true)
 		{
@@ -149,7 +161,9 @@ void check_up()
 	led_setpx(0, 128, 128, 128);
 	led_show();
 	butt1.tick();
-	while (butt1.state() && showUp < 20)
+	int idx_g = conf.leds < 32 ?  5 : 10;
+	int idx_r = conf.leds < 32 ? 10 : 16;
+	while (butt1.state() && showUp < idx_r + 4)
 	{
 		delay(50);
 		showUp++;
@@ -166,18 +180,18 @@ void check_up()
 			pixBut++;
 			if (pixBut == 4)
 			{
-				led_setpx(10, 0, 255, 0);
-				led_setpx(16, 255, 0, 0);
+				led_setpx(idx_g, 0, 255, 0);
+				led_setpx(idx_r, 255, 0, 0);			
 			}
-			if (pixBut != 10 && pixBut != 16 && pixBut < 22) led_setpx(pixBut, 128, 128, 128);
-			if (pixBut == 31) led_setpx(31, 0, 0, 255);
+			if (pixBut != idx_g && pixBut != idx_r && pixBut < idx_r + 6) led_setpx(pixBut, 128, 128, 128);
+			if (pixBut == conf.leds - 1) led_setpx(conf.leds - 1, 0, 0, 255);
 			led_show();
-			delay(100);
+			delay(conf.leds < 32 ? 200 : 100);
 		}
-		if (pixBut > 10 && pixBut <= 16)
+		if (pixBut > idx_g && pixBut <= idx_r)
 		{
 			Serial.println(F("But on"));
-			led_setpx(5, 0, 255, 0);
+			led_setpx(idx_g - 1, 0, 255, 0);
 			led_show();
 			delay(500);
 			conf.skpwc = false;
@@ -186,10 +200,10 @@ void check_up()
 			EEPROM.write(EEP_ENOW, 1);
 			EEPROM.commit();
 		}
-		if (pixBut > 16 && pixBut <= 22)
+		if (pixBut > idx_r && pixBut <= idx_r + 6)
 		{
 			Serial.println(F("But off"));
-			led_setpx(5, 255, 0, 0);
+			led_setpx(idx_g - 1, 255, 0, 0);
 			led_show();
 			delay(500);
 			conf.skpwc = true;
@@ -198,10 +212,10 @@ void check_up()
 			EEPROM.write(EEP_ENOW, 0);
 			EEPROM.commit();
 		}
-		if (pixBut == 31)
+		if (pixBut == conf.leds - 1)
 		{
 			led_clear();
-			led_setpx(31, 0, 0, 255);
+			led_setpx(conf.leds - 1, 0, 0, 255);
 			led_show();
 			int dbgloop = 0;
 			while(digitalRead(4) == LOW && onoff == 0)
@@ -213,11 +227,11 @@ void check_up()
 					if(wifi_wps())
 					{
 						json_save();
-						led_setpx(29, 0, 255, 0); led_setpx(30, 0, 255, 0); led_setpx(31, 0, 255, 0);
+						led_setpx(conf.leds - 3, 0, 255, 0); led_setpx(conf.leds - 2, 0, 255, 0); led_setpx(conf.leds - 1, 0, 255, 0);
 					}
 					else
 					{
-						led_setpx(29, 255, 0, 0); led_setpx(30, 255, 0, 0); led_setpx(31, 255, 0, 0);
+						led_setpx(conf.leds - 3, 255, 0, 0); led_setpx(conf.leds - 2, 255, 0, 0); led_setpx(conf.leds - 1, 255, 0, 0);
 					}
 					led_show();
 				}
